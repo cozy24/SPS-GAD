@@ -2,28 +2,7 @@
 
 ## Overview
 
-SPS-GAD is a novel framework for graph anomaly detection that addresses the challenges of heterophily in graph-structured data. The method incorporates a subgraph sparsification module, a hybrid spectral filter, and an attention mechanism to enhance anomaly detection performance. SPS-GAD handles heterophilic graphs by classifying subgraphs into homophilic, heterophilic, and ambiguous categories, applying tailored spectral filters for each subgraph type, and learning both spatial and spectral node representations.
-
-## Installation
-
-1. **Clone the repository:**
-
-   ```bash
-   git clone https://github.com/yourusername/SPS-GAD.git
-   cd SPS-GAD
-   ```
-
-2. **Install dependencies:**
-
-   You can install the required Python packages using `pip`:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Set up your environment:**
-
-   Ensure you have the necessary dependencies for dataset loading and processing (e.g., DGL, PyTorch). Follow the DGL and PyTorch installation instructions based on your system.
+SPS-GAD is a novel framework for graph anomaly detection that addresses the challenges of heterophily in graph-structured data.
 
 ## Usage
 
@@ -38,7 +17,7 @@ python main.py --dataset yelp
 ### Arguments
 
 - `--dataset` (str): Specify the dataset to use. Available options include `yelp`, `weibo`, `amazon`, `elliptic`, and `tolokers`.
-- `--run` (int): The number of runs for the experiment. Default is 10.
+- `--run` (int): The number of runs for the experiment. Default is 1.
 - `--epoch` (int): Number of epochs to train the model. Default is 1000.
 - `--patience` (int): Patience for early stopping. The model will stop training if there is no improvement for this many epochs. Default is 100.
 - `--order` (int): The order of polynomial convolution. . Default is 2.
@@ -59,18 +38,12 @@ This will train the SPS-GAD model using the specified hyperparameters and datase
 
 ### Output
 
-The results of the experiment will be stored in the `output` directory by default. This will include:
+The results of the experiment will include:
 
-- Model checkpoints
-- Training logs
-- Performance metrics (e.g., F1-Macro, AUC, G-Mean)
+- Performance metrics (e.g., Recall, Pecision, F1-Macro, AUC, G-Mean)
 
 ## Model Description
 
 SPS-GAD works by first reconstructing node features and then applying a hybrid spectral filter to capture essential information about the underlying graph structure. The model introduces an edge partitioner to classify subgraphs into homophilic, heterophilic, and ambiguous categories, applying different spectral filters based on the subgraph type. Additionally, it incorporates a weighted loss function to address label imbalance during training.
 
 For further details on the model architecture and experiments, please refer to the paper.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
