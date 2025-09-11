@@ -8,6 +8,24 @@ import torch
 import torch.nn.functional as F
 from sklearn.metrics import f1_score, roc_auc_score, confusion_matrix, recall_score
 
+def compute_gmean(labels_np, preds_np):
+    from sklearn.metrics import confusion_matrix
+    # 计算混淆矩阵
+    tn, fp, fn, tp = confusion_matrix(labels_np, preds_np).ravel()
+    # 计算 Sensitivity (召回率)
+    if (tp + fn == 0):
+        sensitivity = 0
+    else:
+        sensitivity = tp / (tp + fn)
+    # 计算 Specificity (特异度)
+    if (tn + fp == 0):
+        specificity = 0
+    else:
+        specificity = tn / (tn + fp)
+    # 计算 G-Mean
+    gmean = np.sqrt(sensitivity * specificity)
+    return gmean
+    
 def setup_seed(seed):
     os.environ['PYTHONHASHSEED'] = str(seed)
     torch.manual_seed(seed)
