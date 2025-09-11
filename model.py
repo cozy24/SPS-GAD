@@ -227,18 +227,15 @@ class GraphPartitionModule(nn.Module):
             h_pos = self.convs[len(self.convs) - 1](subgraph_pos, h)
             h_neg = self.convs[0](subgraph_neg, h)
 
+            # 遍历独立的卷积层，处理未知子图
+            for i in range(1, len(self.convs) - 1):
+                h_layer = self.convs[i](subgraph_unknown, h)
+                output_list.append(h_layer)
 
-            if(len(self.convs) == 2):
-                h_final = torch.cat([h_pos, h_neg], dim=-1)
-            else:
-                # 遍历独立的卷积层，处理未知子图
-                for i in range(1, len(self.convs) - 1):
-                    h_layer = self.convs[i](subgraph_unknown, h)
-                    output_list.append(h_layer)
-                # 将列表中的特征进行拼接
-                h_unknown = torch.cat(output_list, dim=-1)
-                # 节点特征融合
-                h_final = torch.cat([h_pos, h_unknown, h_neg], dim=-1)
+            # 将列表中的特征进行拼接
+            h_unknown = torch.cat(output_list, dim=-1)
+            # 节点特征融合
+            h_final = torch.cat([h_pos, h_unknown, h_neg], dim=-1)
             combined_feat = self.linear3_dict[etype](h_final)
             combined_feat = self.act(combined_feat)
             combined_feat = self.dropout(combined_feat)
@@ -320,6 +317,12 @@ class NeighborTypeAwareGraphAttention(nn.Module):
         self.gat_neg = GATConv(in_feats, h_feats, num_heads, allow_zero_in_degree=True)
         self.gat_unknown = GATConv(in_feats, h_feats, num_heads, allow_zero_in_degree=True)
 
+        # 用于融合不同头输出的线性层
+        self.output_linear = nn.Linear(h_feats * num_heads, h_feats)
+        self.linear1 = nn.Linear(in_feats, h_feats)
+        self.linear2 = nn.Linear(in_feats, h_feats)
+        self.linear3 = nn.Linear(in_feats, h_feats)
+        self.interaction_weights = nn.Parameter(torch.ones(3))  # 三种类型的权重
         
 
         # 激活函数
@@ -368,7 +371,7 @@ class NeighborTypeAwareGraphAttention(nn.Module):
             same_out = self.gat_neg_dict[etype](subgraph_neg, feat, edge_weight=subgraph_neg.edata['weight']).flatten(1)
             diff_out = self.gat_pos_dict[etype](subgraph_pos, feat, edge_weight=subgraph_pos.edata['weight']).flatten(1)
             unknown_out = self.gat_unknown_dict[etype](subgraph_unknown, feat, edge_weight=subgraph_unknown.edata['weight']).flatten(1)
-            
+
             # 特征交互：通过线性层融合
             combined_out = torch.stack([same_out, diff_out, unknown_out], dim=1)  # (batch_size, 3, feature_dim)
             interaction_weights = torch.softmax(self.interaction_weights_dict[etype], dim=0)  # Learnable weights
@@ -460,7 +463,7 @@ class CombinedModel(nn.Module):
         # 通过解码器重建节点特征
         output= self.feat_fusion(combined_out)
         
-        return output, edge_pred, reconstruction_loss, combined_out
+        return output, edge_pred, reconstruction_loss
     
     def compute_loss(self, output, edge_preds, labels, edge_labels, node_mask, edge_masks, reconstruction_loss):
         # 获取被掩蔽的输出和标签
@@ -474,10 +477,6 @@ class CombinedModel(nn.Module):
         class_weights = class_weights.to(masked_output.device)  # 确保权重在正确的设备上
         node_loss = F.cross_entropy(masked_output, masked_labels, weight=class_weights)
 
-        # # 建立键的映射关系
-        # key_mapping = {'homo': ('r', 'homo', 'r'), 's': ('r', 's', 'r'), 't': ('r', 't', 'r'), 'u': ('r', 'u', 'r')}
-        
-        # print(edge_preds, edge_masks)
         def calculate_edge_loss(edge_pred, edge_mask, edge_label):
             masked_edge_pred = edge_pred[edge_mask]
             masked_edge_labels = edge_label[edge_mask]
@@ -516,9 +515,7 @@ class CombinedModel(nn.Module):
         node_loss_weight = node_loss.detach() / (node_loss.detach() + edge_loss.detach() + reconstruction_loss.detach() + 1e-8)
         edge_loss_weight = edge_loss.detach() / (node_loss.detach() + edge_loss.detach() + reconstruction_loss.detach() + 1e-8)
         reconstruction_loss_weight = reconstruction_loss.detach() / (node_loss.detach() + edge_loss.detach() + reconstruction_loss.detach() + 1e-8)
-        # 计算总损失
         total_loss = node_loss * node_loss_weight + edge_loss * edge_loss_weight + reconstruction_loss * reconstruction_loss_weight
-        # total_loss = node_loss * node_loss_weight + edge_loss * edge_loss_weight
         return total_loss
     
 
