@@ -481,7 +481,7 @@ class CombinedModel(nn.Module):
             masked_edge_pred = edge_pred[edge_mask]
             masked_edge_labels = edge_label[edge_mask]
             # 处理边分类标签，将 -1 映射到 0
-            edge_labels_adjusted = (masked_edge_labels + 1).long()  # -1 -> 0, 1 -> 1
+            edge_labels_adjusted = (masked_edge_labels + 1) / 2  # -1 -> 0, 1 -> 1
             # 计算每个类别的样本数量
             edge_class_counts = torch.bincount(edge_labels_adjusted)
             edge_total_count = masked_edge_labels.size(0)
